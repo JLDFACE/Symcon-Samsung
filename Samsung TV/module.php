@@ -304,7 +304,7 @@ class SamsungTV extends IPSModuleHelper {
 
         $this->SendDataToParent(json_encode([
             'DataID' => '{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}',
-            'Buffer' => utf8_encode($req . DecToHex($chksum))
+            'Buffer' => utf8_encode(pack("H*", $req . DecToHex($chksum)))
         ]));
     }
 
