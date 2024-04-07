@@ -273,18 +273,21 @@ class SamsungTV extends IPSModuleHelper {
     }
 
     public function SendCommand(int $cmd, array $data = array()) {
-        $state = IPS_GetInstance(IPS_GetInstance($this->InstanceID)["ConnectionID"])["InstanceStatus"];
-        if ($state >= 200 || !$this->GetValue("OnlineStatus")) {
-            IPS_SetProperty(IPS_GetInstance($this->InstanceID)["ConnectionID"], "Open", false);
-            IPS_ApplyChanges(IPS_GetInstance($this->InstanceID)["ConnectionID"]);
+        $connectionId = IPS_GetInstance($this->InstanceID)["ConnectionID"];
+        $connectionState = IPS_GetProperty($connectionId, "Open");
+
+        $state = IPS_GetInstance($connectionId)["InstanceStatus"];
+        if (($state >= 200 || !$this->GetValue("OnlineStatus")) && $connectionState) {
+            IPS_SetProperty($connectionId, "Open", false);
+            IPS_ApplyChanges($connectionId);
         }
 
         if (!$this->GetValue("OnlineStatus"))
             return;
 
-        if ($state == 104) {
-            IPS_SetProperty(IPS_GetInstance($this->InstanceID)["ConnectionID"], "Open", true);
-            IPS_ApplyChanges(IPS_GetInstance($this->InstanceID)["ConnectionID"]);
+        if ($state == 104 && !$connectionState) {
+            IPS_SetProperty($connectionId, "Open", true);
+            IPS_ApplyChanges($connectionId);
         } else if ($state != 102) {
             return;
         }
