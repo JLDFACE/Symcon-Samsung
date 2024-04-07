@@ -244,6 +244,7 @@ class SamsungTV extends IPSModuleHelper {
             return;
 
         $this->SendCommand(0x00);
+        $this->SendCommand(0x1b, array(0x81));
     }
 
     public function SetPower(bool $powerStatus) {
@@ -368,6 +369,20 @@ class SamsungTV extends IPSModuleHelper {
                 $this->SetValue("Volume", hexdec(substr($payload, 2, 2)));
                 $this->SetValue("Source", hexdec(substr($payload, 6, 2)));
 
+                break;
+            case "1b":
+                $subcmd = substr($payload, 0, 2);
+
+                switch ($subcmd) {
+                    case "81":
+                        $mac = "";
+
+                        for ($i = 0; $i < 12; $i++)
+                            $mac .= chr(pack("H*", substr($payload, $i * 2 + 2)));
+                        $this->LogMessage(print_r($mac, true), KL_MESSAGE);
+
+                        break;
+                }
                 break;
         }
 
