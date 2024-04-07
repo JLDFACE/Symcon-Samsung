@@ -398,11 +398,14 @@ class SamsungTV extends IPSModuleHelper {
 
     public function RequestAction($Ident, $Value): bool {
         if ($Ident == "Power") {
-            $this->SendCommand("PO" . (($Value) ? "N" : "F"));
+            $this->SetPower($Value);
         } else if ($Ident == "Input") {
-            $this->SendCommand("IIS:" . $Value);
+            $this->SetInput($Value);
         } else if ($Ident == "Volume") {
-            $this->SendCommand("IIS:" . $Value);
+            if ($Value < 0 || $Value > 100)
+                return false;
+
+            $this->SetVolume($Value);
         }
 
         $this->SetValue($Ident, $Value);
