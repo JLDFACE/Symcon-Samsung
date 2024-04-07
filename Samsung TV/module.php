@@ -196,7 +196,7 @@ class SamsungTV extends IPSModuleHelper {
         $this->RegisterTimer("QueryDeviceStatus", 2000, 'STV_QueryDeviceStatus(' . $this->InstanceID . ');');
 
         $this->RegisterAttributeString("mac", "00:00:00:00:00:00");
-        $this->RegisterAttributeString("BroadcastAddress", "255.255.255.255");
+        $this->RegisterPropertyString("BroadcastAddress", "255.255.255.255");
 
         $this->SetBuffer("pingTimeouts", 0);
     }
