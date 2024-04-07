@@ -397,7 +397,7 @@ class SamsungTV extends IPSModuleHelper {
     }
 
     public function RequestAction($Ident, $Value): bool {
-        if ($Ident == "Power") {
+        if ($Ident == "PowerStatus") {
             $this->SetPower($Value);
         } else if ($Ident == "Source") {
             $this->SetInput($Value);
