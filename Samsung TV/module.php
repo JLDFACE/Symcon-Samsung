@@ -196,7 +196,6 @@ class SamsungTV extends IPSModuleHelper {
         $this->RegisterTimer("QueryDeviceStatus", 2000, 'STV_QueryDeviceStatus(' . $this->InstanceID . ');');
 
         $this->RegisterAttributeString("mac", "00:00:00:00:00:00");
-        $this->RegisterPropertyString("BroadcastAddress", "255.255.255.255");
 
         $this->SetBuffer("pingTimeouts", 0);
     }
@@ -264,16 +263,19 @@ class SamsungTV extends IPSModuleHelper {
         $this->SendCommand(0x11, array($volume));
     }
 
-    public function PowerOn() {
-        shell_exec("wakeonlan -i " . $this->ReadPropertyString("BroadcastAddress") . " " . $this->ReadAttributeString("mac"));
-            $this->LogMessage("wakeonlan -i " . $this->ReadPropertyString("BroadcastAddress") . " " . $this->ReadAttributeString("mac"), KL_MESSAGE);
-    }
-
-    public function PowerOff() {
+    public function SetPower($power) {
         if (!$this->GetValue("OnlineStatus"))
             return;
 
-        $this->SendCommand(0x11, array(0x00));
+        $this->SendCommand(0x11, array($power ? 0x01 : 0x00));
+    }
+
+    public function PowerOn() {
+        $this->SetPower(true);
+    }
+
+    public function PowerOff() {
+        $this->SetPower(false);
     }
 
     public function SendCommand(int $cmd, array $data = array()) {
