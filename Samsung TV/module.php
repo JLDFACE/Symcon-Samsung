@@ -358,7 +358,7 @@ class SamsungTV extends IPSModuleHelper {
 
         switch ($cmd) {
             case "00":
-                $this->SetValue("Power", substr($payload, 0, 2) == "01");
+                $this->SetValue("PowerStatus", substr($payload, 0, 2) == "01");
                 $this->SetValue("Volume", hexdec(substr($payload, 2, 2)));
                 $this->SetValue("Source", hexdec(substr($payload, 6, 2)));
 
