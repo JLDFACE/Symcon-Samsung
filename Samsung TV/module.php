@@ -341,8 +341,31 @@ class SamsungTV extends IPSModuleHelper {
         //$data["tempVariable"] = $temp;
 
         // Im Meldungsfenster zu Debug zwecken ausgeben
-        $this->LogMessage(print_r($data, true), KL_MESSAGE);
+//        $this->LogMessage(print_r($data, true), KL_MESSAGE);
 
+        $msg = substr($data["hexBuffer"], 2, strlen($data["hexBuffer"]) - 4);
+        $cmd = substr($msg, 8, 2);
+        $monitorId = substr($msg, 2, 2);
+        $ack = substr($msg, 6, 2) == "41";
+
+        if (!$ack) {
+            $error = substr($msg, 10, 2);
+            $this->LogMessage("Command " . $cmd . " failed. Error: " . $error, KL_MESSAGE);
+            return;
+        }
+
+        $payload = substr($msg, 10);
+
+        switch ($cmd) {
+            case "00":
+                $this->SetValue("Power", substr($payload, 0, 2) == "01");
+                $this->SetValue("Volume", hexdec(substr($payload, 2, 2)));
+                $this->SetValue("Source", hexdec(substr($payload, 6, 2)));
+
+                break;
+        }
+
+        $this->LogMessage(print_r($msg, true), KL_MESSAGE);
     }
 
     public function RequestAction($Ident, $Value): bool {
