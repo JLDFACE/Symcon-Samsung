@@ -246,7 +246,9 @@ class SamsungTV extends IPSModuleHelper {
             return;
 
         $this->SendCommand(0x00);
-        $this->SendCommand(0x1b, array(0x81));
+
+        if ($this->GetValue("PowerStatus"))
+            $this->SendCommand(0x1b, array(0x81));
     }
 
     public function SetInput(int $input) {
