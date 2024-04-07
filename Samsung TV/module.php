@@ -306,8 +306,6 @@ class SamsungTV extends IPSModuleHelper {
         while ($chksum > 256)
             $chksum -= 256;
 
-        IPS_LogMessage("DEBUG", $req . DecToHex($chksum));
-
         $this->SendDataToParent(json_encode([
             'DataID' => '{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}',
             'Buffer' => utf8_encode(pack("H*", $req . DecToHex($chksum)))
@@ -356,7 +354,7 @@ class SamsungTV extends IPSModuleHelper {
 
         if (!$ack) {
             $error = substr($msg, 10, 2);
-            $this->LogMessage("Command " . $cmd . " failed. Error: " . $error, KL_MESSAGE);
+//            $this->LogMessage("Command " . $cmd . " failed. Error: " . $error, KL_MESSAGE);
             return;
         }
 
@@ -390,7 +388,7 @@ class SamsungTV extends IPSModuleHelper {
                 break;
         }
 
-        $this->LogMessage(print_r($msg, true), KL_MESSAGE);
+//        $this->LogMessage(print_r($msg, true), KL_MESSAGE);
     }
 
     public function RequestAction($Ident, $Value): bool {
