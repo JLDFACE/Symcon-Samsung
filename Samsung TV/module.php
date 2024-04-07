@@ -266,6 +266,7 @@ class SamsungTV extends IPSModuleHelper {
 
     public function PowerOn() {
         shell_exec("wakeonlan -i " . $this->ReadPropertyString("BroadcastAddress") . " " . $this->ReadAttributeString("mac"));
+            $this->LogMessage("wakeonlan -i " . $this->ReadPropertyString("BroadcastAddress") . " " . $this->ReadAttributeString("mac"), KL_MESSAGE);
     }
 
     public function PowerOff() {
@@ -354,7 +355,7 @@ class SamsungTV extends IPSModuleHelper {
 
         if (!$ack) {
             $error = substr($msg, 10, 2);
-//            $this->LogMessage("Command " . $cmd . " failed. Error: " . $error, KL_MESSAGE);
+            $this->LogMessage("Command " . $cmd . " failed. Error: " . $error, KL_MESSAGE);
             return;
         }
 
