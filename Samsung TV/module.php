@@ -265,7 +265,7 @@ class SamsungTV extends IPSModuleHelper {
         $this->SendCommand(0x11, array($volume));
     }
 
-    public function SetPower($power) {
+    public function SetPower(bool $power) {
         if (!$this->GetValue("OnlineStatus"))
             return;
 
