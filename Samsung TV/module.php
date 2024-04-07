@@ -337,11 +337,11 @@ class SamsungTV extends IPSModuleHelper {
         //$temp = $this->GetBuffer("incomingData");
         $dataIn = utf8_decode($data['Buffer']);
 
-        //$data["hexBuffer"] = bin2hex(utf8_decode($data['Buffer']));
+        $data["hexBuffer"] = bin2hex(utf8_decode($data['Buffer']));
         //$data["tempVariable"] = $temp;
 
         // Im Meldungsfenster zu Debug zwecken ausgeben
-        $this->LogMessage(print_r($dataIn, true), KL_MESSAGE);
+        $this->LogMessage(print_r($data, true), KL_MESSAGE);
 
     }
 
