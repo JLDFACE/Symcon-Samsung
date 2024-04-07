@@ -212,8 +212,11 @@ class SamsungTV extends IPSModuleHelper {
     }
 
     public function RefreshOnlineStatus() {
+        $connectionId = IPS_GetInstance($this->InstanceID)["ConnectionID"];
+        $connectionState = IPS_GetProperty($connectionId, "Open");
+
         $pingTimeouts = $this->GetBuffer("pingTimeouts");
-        $host = IPS_GetProperty(IPS_GetInstance($this->InstanceID)["ConnectionID"], "Host");
+        $host = IPS_GetProperty($connectionId, "Host");
 
         if (strlen($host) > 0) {
             $status = Sys_Ping($host, 1000);
@@ -227,9 +230,9 @@ class SamsungTV extends IPSModuleHelper {
             $pingTimeouts = 4;
         }
 
-        if ($pingTimeouts >= 4) {
-            IPS_SetProperty(IPS_GetInstance($this->InstanceID)["ConnectionID"], "Open", false);
-            IPS_ApplyChanges(IPS_GetInstance($this->InstanceID)["ConnectionID"]);
+        if ($pingTimeouts >= 4 && $connectionState) {
+            IPS_SetProperty($connectionId, "Open", false);
+            IPS_ApplyChanges($connectionId);
         }
 
         $this->SetValue("OnlineStatus", !($pingTimeouts >= 4));
