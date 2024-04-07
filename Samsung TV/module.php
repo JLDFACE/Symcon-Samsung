@@ -378,7 +378,8 @@ class SamsungTV extends IPSModuleHelper {
                         $mac = "";
 
                         for ($i = 0; $i < 12; $i++)
-                            $mac .= chr(pack("H*", substr($payload, $i * 2 + 2)));
+                            $mac .= chr(hexdec(substr($payload, $i * 2 + 2)));
+
                         $this->LogMessage(print_r($mac, true), KL_MESSAGE);
 
                         break;
