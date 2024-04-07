@@ -1,1 +1,7 @@
-{}
+{
+  "elements": {
+    "type": "ValidationTextBox",
+    "name": "BroadcastAddress",
+    "caption": "Broadcast Address"
+  }
+}
