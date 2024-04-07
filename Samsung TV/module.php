@@ -377,10 +377,13 @@ class SamsungTV extends IPSModuleHelper {
                     case "81":
                         $mac = "";
 
-                        for ($i = 0; $i < 12; $i++)
-                            $mac .= ":" . chr(intval(hexdec(substr($payload, $i * 2 + 2, 2))));
+                        for ($h = 0; $h < 6; $h++) {
+                            $mac .= ":";
+                            for ($i = 0; $i < 2; $i++)
+                                $mac .= chr(intval(hexdec(substr($payload, $h * 2 + $i + 2, 2))));
+                        }
 
-                        $max = substr($mac, 1);
+                        $mac = substr($mac, 1);
 
                         $this->LogMessage("MAC: " . $mac, KL_MESSAGE);
 
