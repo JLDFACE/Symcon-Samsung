@@ -11,6 +11,12 @@ class SamsungTV extends IPSModuleHelper {
 
         $this->RequireParent("{3CFF0FD9-E306-41DB-9B5A-9D06D38576C3}");
 
+        $this->RegisterPropertyInteger("CheckOnlineInterval", 2000);
+        $this->RegisterPropertyInteger("QueryStatusInterval", 2000);
+        $this->RegisterPropertyInteger("PingTimeoutMs", 1000);
+        $this->RegisterPropertyInteger("PingFailThreshold", 4);
+        $this->RegisterPropertyInteger("PendingTimeoutMs", 5000);
+
         $this->CreateVariableProfileInteger("SamsungTVSource", 0x04, 0x69, 1, array(
             array(
                 "value" => 0x04,
@@ -198,6 +204,7 @@ class SamsungTV extends IPSModuleHelper {
         $this->RegisterAttributeString("mac", "00:00:00:00:00:00");
 
         $this->SetBuffer("pingTimeouts", 0);
+        $this->SetBuffer("pending", json_encode([]));
     }
 
     public function Destroy() {
@@ -211,17 +218,28 @@ class SamsungTV extends IPSModuleHelper {
     public function ApplyChanges() {
         // Diese Zeile nicht löschen
         parent::ApplyChanges();
+
+        $this->SetTimerInterval("CheckOnlineStatus", $this->ReadPropertyInteger("CheckOnlineInterval"));
+        $this->SetTimerInterval("QueryDeviceStatus", $this->ReadPropertyInteger("QueryStatusInterval"));
     }
 
     public function RefreshOnlineStatus() {
         $connectionId = IPS_GetInstance($this->InstanceID)["ConnectionID"];
         $connectionState = IPS_GetProperty($connectionId, "Open");
 
-        $pingTimeouts = $this->GetBuffer("pingTimeouts");
+        $pingTimeouts = (int) $this->GetBuffer("pingTimeouts");
         $host = IPS_GetProperty($connectionId, "Host");
+        $pingTimeoutMs = $this->ReadPropertyInteger("PingTimeoutMs");
+        $pingFailThreshold = $this->ReadPropertyInteger("PingFailThreshold");
+        if ($pingFailThreshold < 1) {
+            $pingFailThreshold = 1;
+        }
+        if ($pingTimeoutMs < 1) {
+            $pingTimeoutMs = 1;
+        }
 
         if (strlen($host) > 0) {
-            $status = Sys_Ping($host, 1000);
+            $status = Sys_Ping($host, $pingTimeoutMs);
 
             if ($status) {
                 $pingTimeouts = 0;
@@ -229,15 +247,15 @@ class SamsungTV extends IPSModuleHelper {
                 $pingTimeouts++;
             }
         } else {
-            $pingTimeouts = 4;
+            $pingTimeouts = $pingFailThreshold;
         }
 
-        if ($pingTimeouts >= 4 && $connectionState) {
+        if ($pingTimeouts >= $pingFailThreshold && $connectionState) {
             IPS_SetProperty($connectionId, "Open", false);
             IPS_ApplyChanges($connectionId);
         }
 
-        $this->SetValue("OnlineStatus", !($pingTimeouts >= 4));
+        $this->SetValue("OnlineStatus", !($pingTimeouts >= $pingFailThreshold));
         $this->SetBuffer("pingTimeouts", $pingTimeouts);
     }
 
@@ -253,23 +271,23 @@ class SamsungTV extends IPSModuleHelper {
 
     public function SetInput(int $input) {
         if (!$this->GetValue("OnlineStatus"))
-            return;
+            return false;
 
-        $this->SendCommand(0x14, array($input));
+        return $this->SendCommand(0x14, array($input));
     }
 
     public function SetVolume(int $volume) {
         if (!$this->GetValue("OnlineStatus"))
-            return;
+            return false;
 
-        $this->SendCommand(0x12, array($volume));
+        return $this->SendCommand(0x12, array($volume));
     }
 
     public function SetPower(bool $power) {
         if (!$this->GetValue("OnlineStatus"))
-            return;
+            return false;
 
-        $this->SendCommand(0x11, array($power ? 0x01 : 0x00));
+        return $this->SendCommand(0x11, array($power ? 0x01 : 0x00));
     }
 
     public function PowerOn() {
@@ -291,13 +309,13 @@ class SamsungTV extends IPSModuleHelper {
         }
 
         if (!$this->GetValue("OnlineStatus"))
-            return;
+            return false;
 
         if ($state == 104 && !$connectionState) {
             IPS_SetProperty($connectionId, "Open", true);
             IPS_ApplyChanges($connectionId);
         } else if ($state != 102) {
-            return;
+            return false;
         }
 
         $chksum = $cmd + 0x00 + count($data);
@@ -308,13 +326,14 @@ class SamsungTV extends IPSModuleHelper {
             $req .= DecToHex($param);
         }
 
-        while ($chksum > 256)
-            $chksum -= 256;
+        $chksum = $chksum % 256;
 
         $this->SendDataToParent(json_encode([
             'DataID' => '{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}',
             'Buffer' => utf8_encode(pack("H*", $req . DecToHex($chksum)))
         ]));
+
+        return true;
     }
 
     // Empfangene Daten vom Parent (RX Paket) vom Typ Simpel
@@ -360,6 +379,7 @@ class SamsungTV extends IPSModuleHelper {
         if (!$ack) {
             $error = substr($msg, 10, 2);
             $this->LogMessage("Command " . $cmd . " failed. Error: " . $error, KL_MESSAGE);
+            $this->clearPendingForCommand($cmd);
             return;
         }
 
@@ -367,9 +387,9 @@ class SamsungTV extends IPSModuleHelper {
 
         switch ($cmd) {
             case "00":
-                $this->SetValue("PowerStatus", substr($payload, 0, 2) == "01");
-                $this->SetValue("Volume", hexdec(substr($payload, 2, 2)));
-                $this->SetValue("Source", hexdec(substr($payload, 6, 2)));
+                $this->applyDeviceValue("PowerStatus", substr($payload, 0, 2) == "01");
+                $this->applyDeviceValue("Volume", hexdec(substr($payload, 2, 2)));
+                $this->applyDeviceValue("Source", hexdec(substr($payload, 6, 2)));
 
                 break;
             case "1b":
@@ -397,20 +417,106 @@ class SamsungTV extends IPSModuleHelper {
     }
 
     public function RequestAction($Ident, $Value): bool {
+        if (!$this->GetValue("OnlineStatus")) {
+            $this->LogMessage("Set " . $Ident . " failed: device offline.", KL_MESSAGE);
+            return false;
+        }
+
+        $sent = false;
+
         if ($Ident == "PowerStatus") {
-            $this->SetPower($Value);
+            $sent = $this->SetPower($Value);
         } else if ($Ident == "Source") {
-            $this->SetInput($Value);
+            $sent = $this->SetInput($Value);
         } else if ($Ident == "Volume") {
             if ($Value < 0 || $Value > 100)
                 return false;
 
-            $this->SetVolume($Value);
+            $sent = $this->SetVolume($Value);
         }
 
-        $this->SetValue($Ident, $Value);
+        if ($sent) {
+            $this->setPendingValue($Ident, $Value);
+        } else {
+            $this->LogMessage("Set " . $Ident . " failed: command not sent.", KL_MESSAGE);
+        }
 
-        return true;
+        return $sent;
+    }
+
+    private function getPendingValues(): array {
+        $raw = $this->GetBuffer("pending");
+        if ($raw === "" || $raw === null)
+            return [];
+
+        $pending = json_decode($raw, true);
+        if (!is_array($pending))
+            return [];
+
+        return $pending;
+    }
+
+    private function savePendingValues(array $pending): void {
+        $this->SetBuffer("pending", json_encode($pending));
+    }
+
+    private function setPendingValue(string $ident, $value): void {
+        $pending = $this->getPendingValues();
+        $pending[$ident] = [
+            "value" => $value,
+            "since" => microtime(true)
+        ];
+        $this->savePendingValues($pending);
+    }
+
+    private function clearPendingValue(string $ident): void {
+        $pending = $this->getPendingValues();
+        if (array_key_exists($ident, $pending)) {
+            unset($pending[$ident]);
+            $this->savePendingValues($pending);
+        }
+    }
+
+    private function clearPendingForCommand(string $cmd): void {
+        switch (strtoupper($cmd)) {
+            case "11":
+                $this->clearPendingValue("PowerStatus");
+                break;
+            case "12":
+                $this->clearPendingValue("Volume");
+                break;
+            case "14":
+                $this->clearPendingValue("Source");
+                break;
+        }
+    }
+
+    private function applyDeviceValue(string $ident, $value): void {
+        $pending = $this->getPendingValues();
+        if (!array_key_exists($ident, $pending)) {
+            $this->SetValue($ident, $value);
+            return;
+        }
+
+        $pendingEntry = $pending[$ident];
+        if ($value === $pendingEntry["value"]) {
+            $this->SetValue($ident, $value);
+            unset($pending[$ident]);
+            $this->savePendingValues($pending);
+            return;
+        }
+
+        $timeoutMs = $this->ReadPropertyInteger("PendingTimeoutMs");
+        $elapsedMs = (microtime(true) - ($pendingEntry["since"] ?? 0)) * 1000;
+        if ($elapsedMs >= $timeoutMs) {
+            $this->SetValue($ident, $value);
+            unset($pending[$ident]);
+            $this->savePendingValues($pending);
+            $this->LogMessage(
+                "Set " . $ident . " failed: device did not confirm value " . $pendingEntry["value"] . ".",
+                KL_MESSAGE
+            );
+        }
     }
 }
 

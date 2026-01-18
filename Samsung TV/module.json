@@ -3,7 +3,7 @@
   "name" : "Samsung TV",
   "aliases" : [ ],
   "type" : 3,
-  "vendor" : "ITNA GmbH",
+  "vendor" : "FACE GmbH",
   "parentRequirements" : [ "{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}" ],
   "childRequirements" : [ "{E169386F-4A7A-B7C1-A4FC-6F5710F8D43B}" ],
   "implemented" : [ "{018EF6B5-AB94-40C6-AA53-46943E824ACF}", "{B50DA730-9C10-642C-4C77-A5A8DD1BE6D5}" ],

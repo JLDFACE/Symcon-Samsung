@@ -1,10 +1,10 @@
 {
   "id" : "{4568105D-4EC3-AF35-61C3-8103EC9FEAAB}",
-  "author" : "ITNA GmbH",
-  "name" : "Samsung TV Control",
-  "url" : "https://itna.online",
+  "author" : "FACE GmbH",
+  "name" : "Symcon-Samsung",
+  "url" : "https://github.com/JLDFACE/Symcon-Samsung",
   "compatibility" : {
-    "version" : "4.2"
+    "version" : "6.0"
   },
   "version" : "1.0",
   "build" : 0,
