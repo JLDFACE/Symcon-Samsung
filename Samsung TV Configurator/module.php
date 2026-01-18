@@ -346,10 +346,23 @@ class SamsungTVConfigurator extends IPSModule
 
     private function FindInstanceByHostAndPort(string $moduleID, string $host, int $port): int
     {
+        $targetHost = $this->NormalizeHost($host);
+        $targetPort = $this->NormalizePort($port);
+        if ($targetHost === '') {
+            return 0;
+        }
+
         $ids = IPS_GetInstanceListByModuleID($moduleID);
         foreach ($ids as $id) {
             $data = $this->GetInstanceHostPort($id);
-            if ($data['host'] === $host && $data['port'] === $port) {
+            $instHost = $this->NormalizeHost($data['host']);
+            $instPort = $this->NormalizePort($data['port']);
+
+            if ($instHost !== $targetHost) {
+                continue;
+            }
+
+            if ($instPort === $targetPort || $data['port'] === 0 || $port === 0) {
                 return (int) $id;
             }
         }
@@ -383,6 +396,24 @@ class SamsungTVConfigurator extends IPSModule
             'host' => $host,
             'port' => $port
         ];
+    }
+
+    private function NormalizeHost(string $host): string
+    {
+        $host = trim($host);
+        if ($host === '') {
+            return '';
+        }
+        $host = preg_replace('/^[a-z]+:\\/\\//i', '', $host);
+        return trim($host);
+    }
+
+    private function NormalizePort(int $port): int
+    {
+        if ($port < 1) {
+            return 1515;
+        }
+        return $port;
     }
 
     public function AddManual()
