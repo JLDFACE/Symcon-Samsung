@@ -55,6 +55,9 @@ class SamsungTVConfigurator extends IPSModule
         if ($autoSubnet === '' || $autoSubnet === null) {
             $autoSubnet = $this->DetectLocalSubnet();
         }
+        if (!$this->IsValidCIDR($autoSubnet)) {
+            $autoSubnet = '';
+        }
         if (!isset($form['actions']) || !is_array($form['actions'])) {
             $form['actions'] = [];
         }
@@ -90,6 +93,9 @@ class SamsungTVConfigurator extends IPSModule
     {
         $configured = trim($this->ReadPropertyString('ScanSubnet'));
         $auto = $this->DetectLocalSubnet();
+        if (!$this->IsValidCIDR($auto)) {
+            $auto = '';
+        }
 
         if ($configured === '' || !$this->IsValidCIDR($configured)) {
             return ($auto !== '') ? $auto : '';
@@ -105,7 +111,7 @@ class SamsungTVConfigurator extends IPSModule
     private function GetDefaultScanSubnet(): string
     {
         $auto = $this->DetectLocalSubnet();
-        if ($auto !== '') {
+        if ($this->IsValidCIDR($auto)) {
             return $auto;
         }
         return '192.168.1.0/24';
@@ -242,7 +248,7 @@ class SamsungTVConfigurator extends IPSModule
         }
 
         $prefixInt = (int) $prefix;
-        if ($prefixInt < 0 || $prefixInt > 32) {
+        if ($prefixInt <= 0 || $prefixInt > 32) {
             return '';
         }
 
