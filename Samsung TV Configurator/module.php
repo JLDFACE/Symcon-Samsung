@@ -347,7 +347,6 @@ class SamsungTVConfigurator extends IPSModule
     private function FindInstanceByHostAndPort(string $moduleID, string $host, int $port): int
     {
         $targetHost = $this->NormalizeHost($host);
-        $targetPort = $this->NormalizePort($port);
         if ($targetHost === '') {
             return 0;
         }
@@ -356,13 +355,8 @@ class SamsungTVConfigurator extends IPSModule
         foreach ($ids as $id) {
             $data = $this->GetInstanceHostPort($id);
             $instHost = $this->NormalizeHost($data['host']);
-            $instPort = $this->NormalizePort($data['port']);
 
-            if ($instHost !== $targetHost) {
-                continue;
-            }
-
-            if ($instPort === $targetPort || $data['port'] === 0 || $port === 0) {
+            if ($instHost === $targetHost) {
                 return (int) $id;
             }
         }
@@ -405,7 +399,25 @@ class SamsungTVConfigurator extends IPSModule
             return '';
         }
         $host = preg_replace('/^[a-z]+:\\/\\//i', '', $host);
-        return trim($host);
+        $host = trim($host);
+
+        if (substr_count($host, ':') === 1) {
+            $parts = explode(':', $host, 2);
+            if (isset($parts[1]) && ctype_digit($parts[1])) {
+                $host = $parts[0];
+            }
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return $host;
+        }
+
+        $ip = @gethostbyname($host);
+        if ($this->IsUsableIPv4($ip)) {
+            return $ip;
+        }
+
+        return strtolower($host);
     }
 
     private function NormalizePort(int $port): int
