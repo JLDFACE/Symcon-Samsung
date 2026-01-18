@@ -344,6 +344,47 @@ class SamsungTVConfigurator extends IPSModule
         return $this->IsUsableIPv4($host) ? $host : '';
     }
 
+    private function FindInstanceByHostAndPort(string $moduleID, string $host, int $port): int
+    {
+        $ids = IPS_GetInstanceListByModuleID($moduleID);
+        foreach ($ids as $id) {
+            $data = $this->GetInstanceHostPort($id);
+            if ($data['host'] === $host && $data['port'] === $port) {
+                return (int) $id;
+            }
+        }
+        return 0;
+    }
+
+    private function GetInstanceHostPort(int $instanceId): array
+    {
+        $host = '';
+        $port = 0;
+
+        if (IPS_InstanceExists($instanceId)) {
+            $host = (string) IPS_GetProperty($instanceId, 'Host');
+            $port = (int) IPS_GetProperty($instanceId, 'Port');
+
+            if ($host === '' || $port === 0) {
+                $inst = IPS_GetInstance($instanceId);
+                $parentId = isset($inst['ConnectionID']) ? (int) $inst['ConnectionID'] : 0;
+                if ($parentId > 0 && IPS_InstanceExists($parentId)) {
+                    if ($host === '') {
+                        $host = (string) IPS_GetProperty($parentId, 'Host');
+                    }
+                    if ($port === 0) {
+                        $port = (int) IPS_GetProperty($parentId, 'Port');
+                    }
+                }
+            }
+        }
+
+        return [
+            'host' => $host,
+            'port' => $port
+        ];
+    }
+
     public function AddManual()
     {
         $ip = trim($this->ReadPropertyString('ManualIP'));
@@ -388,12 +429,16 @@ class SamsungTVConfigurator extends IPSModule
     private function BuildRow(string $ip, int $port): array
     {
         $deviceModuleID = '{CB543CA0-A203-6654-F8B5-3507A157CD68}';
+        $existing = $this->FindInstanceByHostAndPort($deviceModuleID, $ip, $port);
 
-        return [
+        $row = [
             'address' => $ip,
             'info' => 'TCP/' . $port,
-            'instanceID' => 0,
-            'create' => [
+            'instanceID' => ($existing > 0) ? $existing : 0
+        ];
+
+        if ($existing == 0) {
+            $row['create'] = [
                 [
                     'moduleID' => $deviceModuleID,
                     'configuration' => [
@@ -401,8 +446,10 @@ class SamsungTVConfigurator extends IPSModule
                         'Port' => $port
                     ]
                 ]
-            ]
-        ];
+            ];
+        }
+
+        return $row;
     }
 
     private function ProbeDevice(string $ip, int $port): bool
