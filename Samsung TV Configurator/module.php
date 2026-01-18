@@ -351,6 +351,14 @@ class SamsungTVConfigurator extends IPSModule
             return 0;
         }
 
+        $socketId = $this->FindSocketInstance($targetHost, $port);
+        if ($socketId > 0) {
+            $deviceId = $this->FindDeviceByConnectionId($moduleID, $socketId);
+            if ($deviceId > 0) {
+                return $deviceId;
+            }
+        }
+
         $ids = IPS_GetInstanceListByModuleID($moduleID);
         foreach ($ids as $id) {
             $data = $this->GetInstanceHostPort($id);
@@ -390,6 +398,40 @@ class SamsungTVConfigurator extends IPSModule
             'host' => $host,
             'port' => $port
         ];
+    }
+
+    private function FindSocketInstance(string $host, int $port): int
+    {
+        $targetHost = $this->NormalizeHost($host);
+        if ($targetHost === '') {
+            return 0;
+        }
+
+        $targetPort = $this->NormalizePort($port);
+        $socketModuleId = '{3CFF0FD9-E306-41DB-9B5A-9D06D38576C3}';
+
+        $ids = IPS_GetInstanceListByModuleID($socketModuleId);
+        foreach ($ids as $id) {
+            $sockHost = $this->NormalizeHost((string) IPS_GetProperty($id, 'Host'));
+            $sockPort = $this->NormalizePort((int) IPS_GetProperty($id, 'Port'));
+            if ($sockHost === $targetHost && $sockPort === $targetPort) {
+                return (int) $id;
+            }
+        }
+        return 0;
+    }
+
+    private function FindDeviceByConnectionId(string $moduleID, int $connectionId): int
+    {
+        $ids = IPS_GetInstanceListByModuleID($moduleID);
+        foreach ($ids as $id) {
+            $inst = IPS_GetInstance($id);
+            $parentId = isset($inst['ConnectionID']) ? (int) $inst['ConnectionID'] : 0;
+            if ($parentId === $connectionId) {
+                return (int) $id;
+            }
+        }
+        return 0;
     }
 
     private function NormalizeHost(string $host): string
