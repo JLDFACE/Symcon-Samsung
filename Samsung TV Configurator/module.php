@@ -20,11 +20,10 @@ class SamsungTVConfigurator extends IPSModule
         parent::ApplyChanges();
 
         $auto = $this->DetectLocalSubnet();
-        if ($auto !== '' && trim($this->ReadPropertyString('ScanSubnet')) === '192.168.1.0/24') {
-            $this->SetBuffer('AutoSubnet', $auto);
-        } else {
-            $this->SetBuffer('AutoSubnet', $auto);
+        if (!$this->IsValidCIDR($auto)) {
+            $auto = '';
         }
+        $this->SetBuffer('AutoSubnet', $auto);
     }
 
     public function GetConfigurationForm()
@@ -159,20 +158,7 @@ class SamsungTVConfigurator extends IPSModule
     private function ExtractNetworkEntries($info): array
     {
         $entries = [];
-        if (!is_array($info)) {
-            return $entries;
-        }
-
-        if ($this->LooksLikeNetworkEntry($info)) {
-            $entries[] = $info;
-            return $entries;
-        }
-
-        foreach ($info as $entry) {
-            if ($this->LooksLikeNetworkEntry($entry)) {
-                $entries[] = $entry;
-            }
-        }
+        $this->CollectNetworkEntries($info, $entries, 0);
         return $entries;
     }
 
@@ -188,6 +174,23 @@ class SamsungTVConfigurator extends IPSModule
             }
         }
         return false;
+    }
+
+    private function CollectNetworkEntries($node, array &$entries, int $depth): void
+    {
+        if (!is_array($node)) {
+            return;
+        }
+        if ($this->LooksLikeNetworkEntry($node)) {
+            $entries[] = $node;
+            return;
+        }
+        if ($depth >= 4) {
+            return;
+        }
+        foreach ($node as $child) {
+            $this->CollectNetworkEntries($child, $entries, $depth + 1);
+        }
     }
 
     private function EntryHasGateway($entry): bool
@@ -227,6 +230,10 @@ class SamsungTVConfigurator extends IPSModule
             if ($prefix === '') {
                 $prefix = trim($parts[1]);
             }
+        }
+
+        if ($mask === '' && $prefix === '') {
+            $prefix = '24';
         }
 
         return $this->BuildCIDR($ip, $mask, $prefix);
