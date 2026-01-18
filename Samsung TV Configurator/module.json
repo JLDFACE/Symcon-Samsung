@@ -1,0 +1,13 @@
+{
+  "id": "{0CD558A5-E1FA-461F-889E-5B2020840631}",
+  "name": "Samsung TV Configurator",
+  "type": 4,
+  "vendor": "FACE GmbH",
+  "aliases": [
+    "Samsung TV Discovery"
+  ],
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "STV"
+}

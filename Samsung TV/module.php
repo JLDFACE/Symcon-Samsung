@@ -11,6 +11,9 @@ class SamsungTV extends IPSModuleHelper {
 
         $this->RequireParent("{3CFF0FD9-E306-41DB-9B5A-9D06D38576C3}");
 
+        $this->RegisterPropertyString("Host", "");
+        $this->RegisterPropertyInteger("Port", 1515);
+
         $this->RegisterPropertyInteger("CheckOnlineInterval", 2000);
         $this->RegisterPropertyInteger("QueryStatusInterval", 2000);
         $this->RegisterPropertyInteger("PingTimeoutMs", 1000);
@@ -218,6 +221,21 @@ class SamsungTV extends IPSModuleHelper {
     public function ApplyChanges() {
         // Diese Zeile nicht löschen
         parent::ApplyChanges();
+
+        $host = trim($this->ReadPropertyString("Host"));
+        $port = (int) $this->ReadPropertyInteger("Port");
+        if ($port < 1) {
+            $port = 1515;
+        }
+
+        $inst = IPS_GetInstance($this->InstanceID);
+        $parentId = isset($inst["ConnectionID"]) ? (int) $inst["ConnectionID"] : 0;
+
+        if ($parentId > 0 && IPS_InstanceExists($parentId) && $host !== "") {
+            IPS_SetProperty($parentId, "Host", $host);
+            IPS_SetProperty($parentId, "Port", $port);
+            IPS_ApplyChanges($parentId);
+        }
 
         $this->SetTimerInterval("CheckOnlineStatus", $this->ReadPropertyInteger("CheckOnlineInterval"));
         $this->SetTimerInterval("QueryDeviceStatus", $this->ReadPropertyInteger("QueryStatusInterval"));
