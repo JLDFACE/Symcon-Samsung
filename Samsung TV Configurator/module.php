@@ -18,6 +18,13 @@ class SamsungTVConfigurator extends IPSModule
     public function ApplyChanges()
     {
         parent::ApplyChanges();
+
+        $auto = $this->DetectLocalSubnet();
+        if ($auto !== '' && trim($this->ReadPropertyString('ScanSubnet')) === '192.168.1.0/24') {
+            $this->SetBuffer('AutoSubnet', $auto);
+        } else {
+            $this->SetBuffer('AutoSubnet', $auto);
+        }
     }
 
     public function GetConfigurationForm()
@@ -43,6 +50,18 @@ class SamsungTVConfigurator extends IPSModule
                 break;
             }
         }
+
+        $autoSubnet = $this->GetBuffer('AutoSubnet');
+        if ($autoSubnet === '' || $autoSubnet === null) {
+            $autoSubnet = $this->DetectLocalSubnet();
+        }
+        if (!isset($form['actions']) || !is_array($form['actions'])) {
+            $form['actions'] = [];
+        }
+        array_unshift($form['actions'], [
+            'type' => 'Label',
+            'caption' => 'Auto-Subnetz: ' . ($autoSubnet !== '' ? $autoSubnet : 'n/a')
+        ]);
 
         return json_encode($form);
     }
